@@ -2,8 +2,7 @@ name: EOD Results Highlights
 
 on:
   schedule:
-    # 6:00 PM IST = 12:30 UTC, Mon-Fri
-    - cron: "30 12 * * 1-5"
+    - cron: "30 12 * * 1-5"   # 6:00 PM IST Mon–Fri
   workflow_dispatch:
 
 jobs:
@@ -21,7 +20,10 @@ jobs:
 
       - name: Generate and send EOD highlights
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:         ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python eod.py

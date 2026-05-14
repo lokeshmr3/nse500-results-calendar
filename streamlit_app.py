@@ -101,8 +101,43 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 /* Divider */
 hr { border: none; border-top: 1px solid #e8ecf4; margin: 16px 0; }
 
-/* Dataframe */
-[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; border: 1px solid #e8ecf4; }
+/* Results table */
+.cal-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e8ecf4;
+}
+.cal-table thead tr {
+    background: linear-gradient(135deg, #1a1f36 0%, #2d3561 70%, #1a56db 100%);
+    color: white;
+}
+.cal-table th {
+    padding: 12px 14px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    text-align: left;
+    white-space: nowrap;
+}
+.cal-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #f0f2f8;
+    vertical-align: middle;
+}
+.cal-table tbody tr:hover { background: #f0f4ff !important; }
+.cal-table tbody tr:last-child td { border-bottom: none; }
+.row-today { background: #fffbeb; }
+.row-even  { background: #ffffff; }
+.row-odd   { background: #f9fafb; }
+.sym { font-weight: 700; color: #1a1f36; }
+.date-cell { font-weight: 600; color: #374151; }
+.mcap-cell { font-weight: 600; color: #1a56db; }
+.sector-cell { font-size: 0.8rem; color: #6b7280; }
+.seq { color: #d1d5db; font-size: 0.75rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -147,11 +182,6 @@ def get_status(d) -> str:
     if d < today:    return "Past"
     return "Upcoming"
 
-def badge_html(status: str) -> str:
-    cls = {"Today": "badge-today", "Upcoming": "badge-upcoming", "Past": "badge-past"}.get(status, "")
-    icon = {"Today": "🟡", "Upcoming": "🟢", "Past": "⚫"}.get(status, "")
-    return f'<span class="badge {cls}">{icon} {status}</span>'
-
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -183,7 +213,7 @@ def main():
     st.markdown(f"""
     <div class="app-header">
         <h1>📊 NSE 500 Results Calendar</h1>
-        <p class="sub">Last updated {updated_at} IST · Data from NSE India · Highlights by Claude AI</p>
+        <p class="sub">Last updated {updated_at} IST · Data from NSE India · Highlights by Lokesh Maru</p>
         <span class="quarter-badge">{quarter}</span>
     </div>
     """, unsafe_allow_html=True)
@@ -236,7 +266,7 @@ def main():
         st.markdown(
             "<small style='color:#9ca3af'>🕗 Morning alerts: 8 AM IST<br>"
             "📩 EOD highlights: 6 PM IST<br>"
-            "🤖 Powered by Claude AI</small>",
+            "🤖 Powered by Lokesh Maru</small>",
             unsafe_allow_html=True,
         )
 
@@ -254,29 +284,37 @@ def main():
     if sort_by == "Market Cap ↓":
         view = view.sort_values("market_cap_cr", ascending=False)
     elif sort_by == "Date ↑":
-        view = view.sort_values("_date")
+        view = view.sort_values(["_date", "market_cap_cr"], ascending=[True, False])
+    else:  # Date → Mkt Cap (default)
+        view = view.sort_values(["_date", "market_cap_cr"], ascending=[True, False])
 
     st.caption(f"Showing **{len(view)}** of {len(df)} companies")
 
     # ── Table ─────────────────────────────────────────────────────────────────
-    display = view[["Date", "symbol", "name", "sector", "Mkt Cap", "Status"]].copy()
-    display.columns = ["Date", "Symbol", "Company", "Sector", "Market Cap", "Status"]
-    display = display.reset_index(drop=True)
-    display.index += 1
+    rows_html = ""
+    for i, (_, row) in enumerate(view.iterrows(), 1):
+        status = row["Status"]
+        badge_cls  = {"Today": "badge-today", "Upcoming": "badge-upcoming", "Past": "badge-past"}.get(status, "")
+        badge_icon = {"Today": "🟡", "Upcoming": "🟢", "Past": "⚫"}.get(status, "")
+        row_cls    = "row-today" if status == "Today" else ("row-even" if i % 2 == 0 else "row-odd")
+        rows_html += f"""<tr class="{row_cls}">
+            <td class="seq">{i}</td>
+            <td class="date-cell">{row['Date']}</td>
+            <td class="sym">{row['symbol']}</td>
+            <td>{row['name']}</td>
+            <td class="sector-cell">{row['sector'] or '—'}</td>
+            <td class="mcap-cell">{row['Mkt Cap']}</td>
+            <td><span class="badge {badge_cls}">{badge_icon} {status}</span></td>
+        </tr>"""
 
-    st.dataframe(
-        display,
-        use_container_width=True,
-        height=580,
-        column_config={
-            "Date":       st.column_config.TextColumn("Date",       width=80),
-            "Symbol":     st.column_config.TextColumn("Symbol",     width=110),
-            "Company":    st.column_config.TextColumn("Company",    width=260),
-            "Sector":     st.column_config.TextColumn("Sector",     width=170),
-            "Market Cap": st.column_config.TextColumn("Market Cap", width=120),
-            "Status":     st.column_config.TextColumn("Status",     width=100),
-        },
-    )
+    st.markdown(f"""
+    <table class="cal-table">
+        <thead><tr>
+            <th>#</th><th>Date</th><th>Symbol</th><th>Company</th>
+            <th>Sector</th><th>Market Cap</th><th>Status</th>
+        </tr></thead>
+        <tbody>{rows_html}</tbody>
+    </table>""", unsafe_allow_html=True)
 
     st.markdown(
         "<p style='color:#9ca3af; font-size:0.75rem; margin-top:8px'>"

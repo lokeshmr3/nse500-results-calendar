@@ -1,0 +1,33 @@
+name: Refresh Calendar Data
+
+on:
+  schedule:
+    # 6:00 AM IST = 00:30 UTC, daily
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Refresh calendar
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python refresh.py
+
+      - name: Commit updated calendar
+        run: |
+          git config user.name "results-bot"
+          git config user.email "bot@results-calendar"
+          git add data/calendar.json data/mcap_cache.json || true
+          git diff --cached --quiet || git commit -m "chore: refresh calendar data [skip ci]"
+          git push

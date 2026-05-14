@@ -1,0 +1,10 @@
+.env
+.vscode/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+data/mcap_cache.json
+*.log
+.DS_Store
